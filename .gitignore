@@ -1,0 +1,22 @@
+# Environnement et Mots de passe (SÉCURITÉ)
+.env
+.env.local
+.env.*.local
+
+# Dépendances Node (Très lourdes)
+node_modules/
+**/node_modules/
+
+# Dossiers de build frontend
+dist/
+dist-ssr/
+*.local
+
+# Logs et Fichiers système
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
