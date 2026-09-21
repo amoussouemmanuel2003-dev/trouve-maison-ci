@@ -62,13 +62,23 @@ const handleLogout = () => {
             <span>Je cherche (Locataires)</span>
           </router-link>
 
-          <!-- Bouton Publier une annonce (Propriétaire / Démarcheur / Admin) -->
+          <!-- Bouton Publier une annonce (Propriétaire / Démarcheur / Client) ou Administration (Admin) -->
           <router-link 
+            v-if="!authStore.isAdmin"
             to="/publier" 
             class="ml-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all active:scale-95"
           >
             <PlusCircle class="w-4 h-4" />
             <span>Publier une annonce</span>
+          </router-link>
+
+          <router-link 
+            v-else
+            to="/admin" 
+            class="ml-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-semibold flex items-center gap-2 shadow-md shadow-rose-500/20 transition-all active:scale-95"
+          >
+            <Shield class="w-4 h-4" />
+            <span>Administration</span>
           </router-link>
         </nav>
 
@@ -191,11 +201,20 @@ const handleLogout = () => {
         📝 Je cherche (Locataires)
       </router-link>
       <router-link 
+        v-if="!authStore.isAdmin"
         @click="mobileMenuOpen = false" 
         to="/publier" 
         class="block px-3 py-2 rounded-lg text-base font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20"
       >
         ➕ Publier une annonce
+      </router-link>
+      <router-link 
+        v-else
+        @click="mobileMenuOpen = false" 
+        to="/admin" 
+        class="block px-3 py-2 rounded-lg text-base font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20"
+      >
+        🛡️ Panneau Administration
       </router-link>
 
       <div class="border-t border-slate-800 pt-3">

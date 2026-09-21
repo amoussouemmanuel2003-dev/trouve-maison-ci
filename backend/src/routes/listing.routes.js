@@ -13,8 +13,8 @@ router.get('/user/favorites', authenticateToken, listingController.getMyFavorite
 // Détail d'une annonce
 router.get('/:id', listingController.getListingById);
 
-// Création d'une annonce : Réservée aux Propriétaires (LANDLORD), Démarcheurs (AGENT) et Admins (ADMIN)
-router.post('/', authenticateToken, authorizeRoles('LANDLORD', 'AGENT', 'ADMIN'), listingController.createListing);
+// Création d'une annonce : Réservée aux Propriétaires (LANDLORD), Démarcheurs (AGENT) et Clients (USER)
+router.post('/', authenticateToken, authorizeRoles('LANDLORD', 'AGENT', 'USER'), listingController.createListing);
 
 // Modification & Suppression
 router.put('/:id', authenticateToken, listingController.updateListing);
