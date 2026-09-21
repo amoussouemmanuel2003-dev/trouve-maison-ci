@@ -135,3 +135,11 @@ Le mot de passe pour tous les comptes pré-créés par `seed.sql` est : **`Passw
 - `GET /api/admin/users` : Liste complète des utilisateurs.
 - `PUT /api/admin/users/:id/role` : Modifier le rôle d'un utilisateur.
 - `PUT /api/admin/users/:id/status` : Activer / Suspendre un compte.
+
+## Déploiement Render + Vercel
+
+Backend (Render) : définissez `NODE_ENV=production`, `DATABASE_URL`, `CLIENT_URL` (l'URL Vercel, ou plusieurs URLs séparées par des virgules), `JWT_SECRET` et un `DEFAULT_ADMIN_PASSWORD` robuste. Le premier démarrage vérifie les communes et crée l'admin si nécessaire ; vous pouvez aussi exécuter `npm run seed` après `npm run db:init`.
+
+Frontend (Vercel) : définissez `VITE_API_URL=https://trouve-maison-ci.onrender.com/api`, puis redéployez. Les previews `https://*.vercel.app` sont acceptées par le CORS ; n'ajoutez pas de slash final à l'URL API.
+
+Les chemins d'image relatifs (`/uploads/...`) et les anciennes URLs `localhost` sont automatiquement résolus vers le backend. Les fichiers présents dans `backend/uploads` sont servis par Express, mais le disque Render est éphémère : utilisez Cloudinary ou S3 pour les nouvelles images à conserver entre les redéploiements.

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useListingStore } from '../stores/listing.store';
 import WhatsAppButton from '../components/WhatsAppButton.vue';
+import { resolveImageUrl } from '../services/images';
 import { 
   MapPin, 
   Bed, 
@@ -83,7 +84,7 @@ const toggleFavorite = async () => {
           <div class="aspect-[16/10] bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative shadow-2xl">
             <img 
               v-if="listing.images && listing.images.length > 0"
-              :src="listing.images[activeImageIndex]?.image_url" 
+              :src="imageUrl(listing.images[activeImageIndex])" 
               :alt="listing.title"
               class="w-full h-full object-cover"
             />
@@ -113,7 +114,7 @@ const toggleFavorite = async () => {
                 activeImageIndex === idx ? 'border-amber-500 scale-95 shadow-md' : 'border-slate-800 opacity-60 hover:opacity-100'
               ]"
             >
-              <img :src="img.image_url" class="w-full h-full object-cover" />
+              <img :src="imageUrl(img)" class="w-full h-full object-cover" />
             </button>
           </div>
         </div>

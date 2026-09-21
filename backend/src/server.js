@@ -2,8 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 const config = require('./config/env');
 const db = require('./config/db');
+const { seedDatabase } = require('../database/seed');
 const apiRoutes = require('./routes/index');
 const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
 
@@ -16,15 +18,31 @@ const app = express();
 // Sécurisation des headers HTTP
 app.use(helmet());
 
-// Configuration CORS (autoriser le frontend Vue 3)
+// Render est derrière un proxy : nécessaire pour les URLs et IP réelles.
+app.set('trust proxy', 1);
+
+const allowedOrigins = new Set(
+    config.CLIENT_URL.split(',').map((url) => url.trim()).filter(Boolean)
+);
+
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true; // curl, Postman, health checks
+    if (allowedOrigins.has(origin)) return true;
+
+    try {
+        const url = new URL(origin);
+        return (url.protocol === 'https:' && url.hostname.endsWith('.vercel.app')) ||
+            ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') && config.NODE_ENV !== 'production');
+    } catch {
+        return false;
+    }
+};
+
+// CLIENT_URL accepte plusieurs URLs séparées par des virgules, avec les previews Vercel.
 app.use(cors({
     origin: (origin, callback) => {
-        // Autoriser les requêtes sans origine (ex: curl, Postman) ou venant du CLIENT_URL ou localhost
-        if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || origin === config.CLIENT_URL) {
-            callback(null, true);
-        } else {
-            callback(null, true); // En dev/test, permissive
-        }
+        if (isAllowedOrigin(origin)) return callback(null, true);
+        return callback(new Error(`Origine CORS non autorisée : ${origin}`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -39,6 +57,10 @@ if (config.NODE_ENV !== 'test') {
 // Parsers JSON et URL-encoded
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Les URLs /uploads/... stockées en base restent exploitables en ligne.
+// Pour un stockage durable, préférez Cloudinary/S3 : Render efface son disque au redéploiement.
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '1d' }));
 
 // ==========================================
 // 2. MONTAGE DES ROUTES
@@ -81,6 +103,10 @@ const server = app.listen(PORT, async () => {
         try {
             const res = await db.query('SELECT NOW() as now, current_database() as db_name');
             console.log(`✅ Connecté à PostgreSQL Neon [BDD: ${res.rows[0].db_name}] à ${res.rows[0].now}`);
+            if (config.AUTO_SEED) {
+                await seedDatabase();
+                console.log('🌱 Données de base vérifiées (admin et communes).');
+            }
         } catch (err) {
             console.warn(`⚠️ Attention: Impossible de joindre PostgreSQL Neon (${err.message}).`);
             console.warn(`👉 Vérifiez votre DATABASE_URL dans backend/.env ou lancez 'npm run db:init'`);

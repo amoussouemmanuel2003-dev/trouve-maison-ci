@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Bed, Bath, Maximize2, MapPin, Zap, Droplet, Heart } from 'lucide-vue-next';
 import WhatsAppButton from './WhatsAppButton.vue';
+import { FALLBACK_LISTING_IMAGE, resolveImageUrl } from '../services/images';
 
 const props = defineProps({
   listing: {
@@ -27,9 +28,9 @@ const formattedPrice = computed(() => {
 // Image principale avec fallback de qualité
 const primaryImage = computed(() => {
   if (props.listing.images && props.listing.images.length > 0) {
-    return props.listing.images[0].image_url;
+    return resolveImageUrl(props.listing.images[0].image_url);
   }
-  return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80';
+  return FALLBACK_LISTING_IMAGE;
 });
 
 // Libellé lisible du type de bien
