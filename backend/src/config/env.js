@@ -15,5 +15,5 @@ module.exports = {
     DEFAULT_ADMIN_NAME: process.env.DEFAULT_ADMIN_NAME || 'Administrateur Trouve Maison CI',
     DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL || 'admin@trouvemaison.ci',
     DEFAULT_ADMIN_PHONE: process.env.DEFAULT_ADMIN_PHONE || '+2250700000001',
-    DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMeImmediately123!'
+    DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || 'Password123!'
 };

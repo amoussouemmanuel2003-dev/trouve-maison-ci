@@ -37,8 +37,8 @@ const register = async (req, res, next) => {
         const allowedRoles = ['USER', 'LANDLORD', 'AGENT'];
         const userRole = allowedRoles.includes(role) ? role : 'USER';
 
-        // Nettoyer les numéros
-        const cleanedPhone = phone.trim();
+        // Nettoyer les numéros (supprimer les espaces superflus)
+        const cleanedPhone = phone.trim().replace(/\s+/g, '');
         const cleanedEmail = email ? email.trim().toLowerCase() : null;
 
         // Vérifier si le téléphone existe déjà
