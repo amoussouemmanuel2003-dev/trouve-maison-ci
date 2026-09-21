@@ -9,13 +9,17 @@ import {
   Building, 
   Clock, 
   AlertCircle,
-  Eye
+  Eye,
+  Star,
+  Trash2,
+  Rocket
 } from 'lucide-vue-next';
 
 const stats = ref(null);
 const pendingListings = ref([]);
+const allListings = ref([]);
 const users = ref([]);
-const activeSection = ref('moderation'); // 'moderation', 'users'
+const activeSection = ref('moderation'); // 'moderation', 'all_listings', 'users'
 const isLoading = ref(false);
 
 const loadAdminData = async () => {
@@ -26,6 +30,9 @@ const loadAdminData = async () => {
 
     const pendingRes = await api.get('/admin/listings/pending');
     pendingListings.value = pendingRes.data.data;
+
+    const allRes = await api.get('/listings?status=ACTIVE&limit=100');
+    allListings.value = allRes.data.data;
 
     const usersRes = await api.get('/admin/users?limit=50');
     users.value = usersRes.data.data;
@@ -41,13 +48,35 @@ onMounted(loadAdminData);
 const moderate = async (id, status) => {
   try {
     await api.put(`/admin/listings/${id}/moderate`, { status });
-    // Recharger
-    const pendingRes = await api.get('/admin/listings/pending');
-    pendingListings.value = pendingRes.data.data;
-    const statsRes = await api.get('/admin/stats');
-    stats.value = statsRes.data.data;
+    await loadAdminData();
   } catch (err) {
     alert('Erreur modération: ' + (err.response?.data?.message || err.message));
+  }
+};
+
+const toggleFeatured = async (listing) => {
+  try {
+    const newFeatured = !listing.is_featured;
+    await api.put(`/admin/listings/${listing.id}/moderate`, { 
+      status: listing.status, 
+      is_featured: newFeatured 
+    });
+    listing.is_featured = newFeatured;
+    alert(newFeatured ? 'Annonce passée À LA UNE avec succès !' : 'Boost retiré.');
+  } catch (err) {
+    alert('Erreur modification Boost: ' + (err.response?.data?.message || err.message));
+  }
+};
+
+const deleteListingAdmin = async (id) => {
+  if (confirm('Êtes-vous sûr de vouloir supprimer définitivement cette annonce ?')) {
+    try {
+      await api.delete(`/listings/${id}`);
+      await loadAdminData();
+      alert('Annonce supprimée avec succès.');
+    } catch (err) {
+      alert('Erreur suppression: ' + (err.response?.data?.message || err.message));
+    }
   }
 };
 
@@ -105,23 +134,34 @@ const toggleUserStatus = async (user) => {
       </div>
     </div>
 
-    <!-- Onglets Modération / Utilisateurs -->
-    <div class="flex border-b border-slate-800 space-x-6 text-sm font-semibold">
+    <!-- Onglets Modération / Annonces Actives / Utilisateurs -->
+    <div class="flex border-b border-slate-800 space-x-6 text-sm font-semibold overflow-x-auto">
       <button 
         @click="activeSection = 'moderation'"
         :class="[
-          'pb-3 flex items-center gap-2 border-b-2 transition-colors',
+          'pb-3 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap',
           activeSection === 'moderation' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
         ]"
       >
         <Clock class="w-4 h-4" />
-        <span>File de Modération ({{ pendingListings.length }})</span>
+        <span>En attente de validation ({{ pendingListings.length }})</span>
+      </button>
+
+      <button 
+        @click="activeSection = 'all_listings'"
+        :class="[
+          'pb-3 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap',
+          activeSection === 'all_listings' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+        ]"
+      >
+        <Building class="w-4 h-4" />
+        <span>Toutes les Annonces & Boosts ({{ allListings.length }})</span>
       </button>
 
       <button 
         @click="activeSection = 'users'"
         :class="[
-          'pb-3 flex items-center gap-2 border-b-2 transition-colors',
+          'pb-3 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap',
           activeSection === 'users' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
         ]"
       >
@@ -191,7 +231,70 @@ const toggleUserStatus = async (user) => {
       </div>
     </div>
 
-    <!-- 3. GESTION DES UTILISATEURS -->
+    <!-- 3. TOUTES LES ANNONCES ACTIVES & GESTION BOOSTS -->
+    <div v-else-if="activeSection === 'all_listings'">
+      <div v-if="allListings.length === 0" class="text-center py-16 bg-[#131d2e] border border-slate-800 rounded-3xl text-slate-400">
+        Aucune annonce active sur la plateforme.
+      </div>
+
+      <div v-else class="space-y-4">
+        <div 
+          v-for="listing in allListings" 
+          :key="listing.id"
+          class="bg-[#131d2e] border border-slate-800 p-5 rounded-3xl flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+        >
+          <div class="space-y-1.5 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span 
+                v-if="listing.is_featured" 
+                class="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-slate-950 flex items-center gap-1"
+              >
+                <Star class="w-3 h-3 fill-current" />
+                <span>⭐ À LA UNE (Boostée)</span>
+              </span>
+              <span class="text-xs font-bold text-slate-400">{{ listing.commune_name }}</span>
+              <span class="text-xs text-slate-500">• Vendeur: {{ listing.author_name }}</span>
+            </div>
+
+            <h4 class="text-base font-bold text-white">{{ listing.title }}</h4>
+            <div class="text-amber-400 font-extrabold text-sm">
+              {{ new Intl.NumberFormat('fr-FR').format(listing.monthly_rent) }} FCFA / mois
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button 
+              @click="toggleFeatured(listing)"
+              :class="[
+                'px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all',
+                listing.is_featured ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ]"
+            >
+              <Rocket class="w-4 h-4 text-amber-400" />
+              <span>{{ listing.is_featured ? 'Retirer "À la une"' : 'Passer "À la une"' }}</span>
+            </button>
+
+            <router-link 
+              :to="`/annonces/${listing.id}`" 
+              class="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"
+              title="Voir"
+            >
+              <Eye class="w-4 h-4" />
+            </router-link>
+
+            <button 
+              @click="deleteListingAdmin(listing.id)" 
+              class="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20"
+              title="Supprimer"
+            >
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. GESTION DES UTILISATEURS -->
     <div v-else-if="activeSection === 'users'">
       <div class="bg-[#131d2e] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">
