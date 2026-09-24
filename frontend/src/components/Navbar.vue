@@ -64,7 +64,7 @@ const handleLogout = () => {
 
           <!-- Bouton Publier une annonce (Propriétaire / Démarcheur / Client) ou Administration (Admin) -->
           <router-link 
-            v-if="!authStore.isAdmin"
+            v-if="authStore.isPublisher"
             to="/publier" 
             class="ml-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all active:scale-95"
           >
@@ -73,7 +73,7 @@ const handleLogout = () => {
           </router-link>
 
           <router-link 
-            v-else
+            v-else-if="authStore.isAdmin"
             to="/admin" 
             class="ml-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-semibold flex items-center gap-2 shadow-md shadow-rose-500/20 transition-all active:scale-95"
           >
@@ -130,7 +130,7 @@ const handleLogout = () => {
                   class="flex items-center gap-2.5 px-4 py-2 text-slate-200 hover:bg-slate-700/60"
                 >
                   <User class="w-4 h-4 text-amber-400" />
-                  <span>Mon Espace (Mes annonces)</span>
+                  <span>{{ authStore.user?.role === 'USER' ? 'Mon Espace (Mes besoins)' : 'Mon Espace (Mes annonces)' }}</span>
                 </router-link>
 
                 <router-link 
@@ -201,7 +201,7 @@ const handleLogout = () => {
         📝 Je cherche (Locataires)
       </router-link>
       <router-link 
-        v-if="!authStore.isAdmin"
+        v-if="authStore.isPublisher"
         @click="mobileMenuOpen = false" 
         to="/publier" 
         class="block px-3 py-2 rounded-lg text-base font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20"
@@ -209,7 +209,7 @@ const handleLogout = () => {
         ➕ Publier une annonce
       </router-link>
       <router-link 
-        v-else
+        v-else-if="authStore.isAdmin"
         @click="mobileMenuOpen = false" 
         to="/admin" 
         class="block px-3 py-2 rounded-lg text-base font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20"

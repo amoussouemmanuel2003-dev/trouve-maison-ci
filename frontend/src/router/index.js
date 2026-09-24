@@ -43,7 +43,7 @@ const routes = [
     component: CreateListingView,
     meta: {
       requiresAuth: true,
-      roles: ['LANDLORD', 'AGENT', 'USER'],
+      roles: ['LANDLORD', 'AGENT', 'ADMIN'],
       title: 'Publier une annonce | Trouve Maison CI',
     },
   },

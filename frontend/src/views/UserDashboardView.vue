@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth.store';
 import { useListingStore } from '../stores/listing.store';
 import ListingCard from '../components/ListingCard.vue';
@@ -26,7 +26,8 @@ import {
 const authStore = useAuthStore();
 const listingStore = useListingStore();
 
-const activeTab = ref('listings'); // 'listings', 'requests', 'favorites', 'boost_history'
+const isSeeker = computed(() => authStore.user?.role === 'USER');
+const activeTab = ref(isSeeker.value ? 'requests' : 'listings');
 const myRequests = ref([]);
 const myBoostRequests = ref([]);
 const isLoading = ref(false);
@@ -44,19 +45,20 @@ const isSubmittingBoost = ref(false);
 const loadDashboardData = async () => {
   isLoading.value = true;
   try {
-    await listingStore.fetchMyListings();
-    await listingStore.fetchFavorites();
+    // Un Chercheur ne gère que ses besoins de logement et ses favoris.
+    if (!isSeeker.value) {
+      await listingStore.fetchMyListings();
+      try {
+        const boostRes = await api.get('/boosts/my-requests');
+        myBoostRequests.value = boostRes.data.data;
+      } catch (e) {
+        console.warn('Boost requests non disponible:', e.message);
+      }
+    }
 
+    await listingStore.fetchFavorites();
     const reqRes = await api.get('/requests/user/my-requests');
     myRequests.value = reqRes.data.data;
-
-    // Charger l'historique des demandes de boost
-    try {
-      const boostRes = await api.get('/boosts/my-requests');
-      myBoostRequests.value = boostRes.data.data;
-    } catch (e) {
-      console.warn('Boost requests non disponible:', e.message);
-    }
   } catch (err) {
     console.error('Erreur dashboard:', err);
   } finally {
@@ -172,12 +174,21 @@ const formatDate = (dateStr) => {
           <PlusCircle class="w-4 h-4" />
           <span>Nouvelle annonce</span>
         </router-link>
+        <router-link 
+          v-else-if="isSeeker"
+          to="/je-cherche" 
+          class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all"
+        >
+          <PlusCircle class="w-4 h-4" />
+          <span>Publier un besoin</span>
+        </router-link>
       </div>
     </div>
 
     <!-- Onglets de Navigation -->
     <div class="flex border-b border-slate-800 space-x-4 sm:space-x-6 text-sm font-semibold overflow-x-auto">
       <button 
+        v-if="authStore.isPublisher"
         @click="activeTab = 'listings'"
         :class="[
           'pb-3 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap',
@@ -189,6 +200,7 @@ const formatDate = (dateStr) => {
       </button>
 
       <button 
+        v-if="authStore.isPublisher"
         @click="activeTab = 'boost_history'"
         :class="[
           'pb-3 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap',
@@ -224,7 +236,7 @@ const formatDate = (dateStr) => {
 
     <!-- CONTENU DES ONGLETS -->
     <!-- 1. MES ANNONCES -->
-    <div v-if="activeTab === 'listings'">
+    <div v-if="authStore.isPublisher && activeTab === 'listings'">
       <div v-if="listingStore.myListings.length === 0" class="text-center py-16 bg-[#131d2e] border border-slate-800 rounded-3xl">
         <p class="text-slate-400 text-sm mb-4">Vous n'avez pas encore publié d'annonce immobilière.</p>
         <router-link to="/publier" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold">
@@ -327,7 +339,7 @@ const formatDate = (dateStr) => {
     </div>
 
     <!-- 2. HISTORIQUE DES BOOSTS -->
-    <div v-else-if="activeTab === 'boost_history'">
+    <div v-else-if="authStore.isPublisher && activeTab === 'boost_history'">
       <div v-if="myBoostRequests.length === 0" class="text-center py-16 bg-[#131d2e] border border-slate-800 rounded-3xl">
         <Rocket class="w-10 h-10 text-slate-600 mx-auto mb-3" />
         <p class="text-slate-400 text-sm mb-1">Aucune demande de boost enregistrée.</p>
@@ -430,7 +442,7 @@ const formatDate = (dateStr) => {
     </div>
 
     <!-- MODAL DE PAIEMENT & BOOST MOBILE MONEY (WAVE / ORANGE / MTN / MOOV) -->
-    <div v-if="showBoostModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div v-if="authStore.isPublisher && showBoostModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="max-w-md w-full bg-[#131d2e] border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto">
         <button 
           @click="showBoostModal = false" 
