@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS listings (
     city_id INT REFERENCES cities(id),
     commune_id INT NOT NULL REFERENCES communes(id),
     neighborhood_id INT REFERENCES neighborhoods(id),
+    neighborhood_name VARCHAR(120),
     address_details VARCHAR(255), -- Ex: "Proche Pharmacie du Bonheur, Carrefour Duncan"
     latitude NUMERIC(10, 7),
     longitude NUMERIC(10, 7),
@@ -174,6 +175,8 @@ CREATE TABLE IF NOT EXISTS listings (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS neighborhood_name VARCHAR(120);
 
 -- Photos des annonces
 CREATE TABLE IF NOT EXISTS listing_images (

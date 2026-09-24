@@ -102,7 +102,7 @@ const getListings = async (req, res, next) => {
             SELECT 
                 l.*,
                 c.name AS commune_name,
-                n.name AS neighborhood_name,
+                COALESCE(n.name, l.neighborhood_name) AS neighborhood_name,
                 ci.name AS city_name,
                 u.full_name AS author_name,
                 u.role AS author_role,
@@ -157,7 +157,7 @@ const getListingById = async (req, res, next) => {
             SELECT 
                 l.*,
                 c.name AS commune_name,
-                n.name AS neighborhood_name,
+                COALESCE(n.name, l.neighborhood_name) AS neighborhood_name,
                 ci.name AS city_name,
                 u.id AS author_id,
                 u.full_name AS author_name,
@@ -222,6 +222,7 @@ const createListing = async (req, res, next) => {
             city_id = 1, // Par défaut Abidjan
             commune_id,
             neighborhood_id,
+            neighborhood_name,
             address_details,
             latitude,
             longitude,
@@ -260,21 +261,23 @@ const createListing = async (req, res, next) => {
         const insertQuery = `
             INSERT INTO listings (
                 user_id, title, description, property_type, city_id, commune_id, neighborhood_id,
+            neighborhood_name,
                 address_details, latitude, longitude, monthly_rent, charges_included, charges_amount,
                 deposit_months, advance_months, agency_fee_months, bedrooms, bathrooms, surface_area,
                 is_furnished, has_balcony, has_parking, has_pool, has_security, has_air_conditioning,
                 water_meter_type, electricity_meter_type, whatsapp_contact, call_contact, status
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7,
-                $8, $9, $10, $11, $12, $13,
-                $14, $15, $16, $17, $18, $19,
-                $20, $21, $22, $23, $24, $25,
-                $26, $27, $28, $29, $30
+                $1, $2, $3, $4, $5, $6, $7, $8,
+                $9, $10, $11, $12, $13, $14,
+                $15, $16, $17, $18, $19, $20,
+                $21, $22, $23, $24, $25, $26,
+                $27, $28, $29, $30, $31
             ) RETURNING *
         `;
 
         const values = [
-            userId, title.trim(), description.trim(), property_type, city_id, commune_id, neighborhood_id || null,
+            userId, title.trim(), description.trim(), property_type, city_id, commune_id, neighborhood_id === 'CUSTOM' ? null : (neighborhood_id || null),
+            neighborhood_name ? neighborhood_name.trim() : null,
             address_details || null, latitude || null, longitude || null, monthly_rent, charges_included, charges_amount,
             deposit_months, advance_months, agency_fee_months, bedrooms, bathrooms, surface_area || null,
             is_furnished, has_balcony, has_parking, has_pool, has_security, has_air_conditioning,

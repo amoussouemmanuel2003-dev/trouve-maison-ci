@@ -38,6 +38,7 @@ const form = ref({
   city_id: 1,
   commune_id: '',
   neighborhood_id: '',
+  neighborhood_name: '',
   address_details: '',
   monthly_rent: '',
   charges_included: false,
@@ -69,11 +70,17 @@ const onCommuneChange = async () => {
   if (form.value.commune_id) {
     neighborhoods.value = await locationStore.fetchNeighborhoods(form.value.commune_id);
     form.value.neighborhood_id = '';
+    form.value.neighborhood_name = '';
   } else {
     neighborhoods.value = [];
   }
 };
 
+const onNeighborhoodChange = () => {
+  if (form.value.neighborhood_id !== 'CUSTOM') {
+    form.value.neighborhood_name = '';
+  }
+};
 const triggerGallery = () => {
   if (galleryInput.value) galleryInput.value.click();
 };
@@ -297,10 +304,21 @@ const handleSubmit = async () => {
 
             <div>
               <label class="block text-xs font-semibold text-slate-300 mb-1.5">Quartier spécifique</label>
-              <select v-model="form.neighborhood_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white">
+              <select v-model="form.neighborhood_id" @change="onNeighborhoodChange" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white">
                 <option value="">Sélectionnez un quartier</option>
                 <option v-for="n in neighborhoods" :key="n.id" :value="n.id">{{ n.name }}</option>
+                <option value="CUSTOM">Autre quartier — saisir le nom</option>
               </select>
+              <input
+                v-if="form.neighborhood_id === 'CUSTOM'"
+                v-model.trim="form.neighborhood_name"
+                type="text"
+                maxlength="120"
+                required
+                placeholder="Ex. Anonkoua-Kouté, Banco, Abobo Baoulé..."
+                class="w-full mt-2 bg-slate-900 border border-amber-500/60 rounded-xl px-4 py-3 text-white focus:border-amber-500"
+              />
+              <p class="mt-1.5 text-[11px] text-slate-500">Votre quartier n'est pas dans la liste ? Choisissez « Autre quartier » puis écrivez son nom.</p>
             </div>
           </div>
 
