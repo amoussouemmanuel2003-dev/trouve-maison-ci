@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import { useListingStore } from '../stores/listing.store';
+import { useAuthStore } from '../stores/auth.store';
 import WhatsAppButton from '../components/WhatsAppButton.vue';
 import { resolveImageUrl } from '../services/images';
 import { 
@@ -25,6 +25,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const listingStore = useListingStore();
+const authStore = useAuthStore();
 
 const activeImageIndex = ref(0);
 const isFavorite = ref(false);
@@ -93,12 +94,15 @@ const toggleFavorite = async () => {
             </div>
 
             <!-- Badges sur l'image -->
-            <div class="absolute top-4 left-4 flex gap-2">
+            <div class="absolute top-4 left-4 flex gap-2 flex-wrap">
               <span class="px-3 py-1 rounded-xl text-xs font-bold bg-black/70 backdrop-blur-md text-amber-400 border border-amber-400/30">
                 {{ listing.property_type }}
               </span>
               <span v-if="listing.is_furnished" class="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-md">
                 Meublé
+              </span>
+              <span v-if="authStore.user?.id && listing.user_id === authStore.user?.id" class="px-3 py-1 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 shadow-md flex items-center gap-1">
+                👤 Votre propre annonce
               </span>
             </div>
           </div>

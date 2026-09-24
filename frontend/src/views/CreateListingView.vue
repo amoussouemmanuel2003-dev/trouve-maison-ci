@@ -163,10 +163,14 @@ const handleSubmit = async () => {
   isSubmitting.value = false;
 
   if (res.success) {
-    successMessage.value = res.message;
+    successMessage.value = '🎉 Annonce créée avec succès ! Redirection vers la fiche de votre bien...';
     setTimeout(() => {
-      router.push('/mon-espace');
-    }, 1500);
+      if (res.data && res.data.id) {
+        router.push(`/annonces/${res.data.id}`);
+      } else {
+        router.push('/mon-espace');
+      }
+    }, 1200);
   } else {
     errorMessage.value = res.message;
   }

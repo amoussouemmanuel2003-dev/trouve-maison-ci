@@ -215,6 +215,39 @@ CREATE TABLE IF NOT EXISTS favorites (
     UNIQUE(user_id, listing_id)
 );
 
+-- Demandes de Boost / Paiement Mobile Money
+DO $$ BEGIN
+    CREATE TYPE boost_status_enum AS ENUM (
+        'PENDING',      -- En attente de vérification par l'admin
+        'APPROVED',     -- Paiement vérifié et boost activé
+        'REJECTED'      -- Paiement non confirmé / rejeté
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS boost_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    amount NUMERIC(12, 2) NOT NULL DEFAULT 1000, -- Montant en FCFA
+    payment_method VARCHAR(30) NOT NULL, -- 'WAVE', 'ORANGE', 'MTN', 'MOOV'
+    transaction_reference VARCHAR(100) NOT NULL, -- Numéro expéditeur ou ID transaction
+    phone_sender VARCHAR(25), -- Numéro de téléphone de l'expéditeur
+    status boost_status_enum NOT NULL DEFAULT 'PENDING',
+    admin_note TEXT, -- Note de l'admin (raison du rejet, etc.)
+    boost_days INT DEFAULT 7, -- Durée du boost en jours
+    boost_expires_at TIMESTAMPTZ, -- Date d'expiration du boost (remplie à l'approbation)
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Sécurité en cas de table boost_requests préexistante sans ces colonnes
+ALTER TABLE boost_requests ADD COLUMN IF NOT EXISTS phone_sender VARCHAR(25);
+ALTER TABLE boost_requests ADD COLUMN IF NOT EXISTS admin_note TEXT;
+ALTER TABLE boost_requests ADD COLUMN IF NOT EXISTS boost_days INT DEFAULT 7;
+ALTER TABLE boost_requests ADD COLUMN IF NOT EXISTS boost_expires_at TIMESTAMPTZ;
+
 -- ==========================================================
 -- 3. INDEX DE RECHERCHE ET PERFORMANCE
 -- ==========================================================
@@ -228,6 +261,9 @@ CREATE INDEX IF NOT EXISTS idx_listing_images_listing_id ON listing_images(listi
 CREATE INDEX IF NOT EXISTS idx_property_requests_status ON property_requests(status);
 CREATE INDEX IF NOT EXISTS idx_property_requests_commune ON property_requests(commune_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_boost_requests_user_id ON boost_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_boost_requests_listing_id ON boost_requests(listing_id);
+CREATE INDEX IF NOT EXISTS idx_boost_requests_status ON boost_requests(status);
 
 -- Trigger pour mettre à jour automatiquement `updated_at`
 CREATE OR REPLACE FUNCTION update_timestamp_column()
@@ -246,3 +282,6 @@ CREATE TRIGGER trg_listings_updated_at BEFORE UPDATE ON listings FOR EACH ROW EX
 
 DROP TRIGGER IF EXISTS trg_property_requests_updated_at ON property_requests;
 CREATE TRIGGER trg_property_requests_updated_at BEFORE UPDATE ON property_requests FOR EACH ROW EXECUTE PROCEDURE update_timestamp_column();
+
+DROP TRIGGER IF EXISTS trg_boost_requests_updated_at ON boost_requests;
+CREATE TRIGGER trg_boost_requests_updated_at BEFORE UPDATE ON boost_requests FOR EACH ROW EXECUTE PROCEDURE update_timestamp_column();

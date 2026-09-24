@@ -34,6 +34,7 @@ async function runMigration() {
             console.log('⚠️ Réinitialisation complète demandée (--reset)...');
             console.log('🗑️ Suppression des anciennes tables en conflit...');
             await client.query(`
+                DROP TABLE IF EXISTS boost_requests CASCADE;
                 DROP TABLE IF EXISTS favorites CASCADE;
                 DROP TABLE IF EXISTS property_requests CASCADE;
                 DROP TABLE IF EXISTS listing_images CASCADE;

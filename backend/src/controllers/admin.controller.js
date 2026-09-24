@@ -15,7 +15,9 @@ const getDashboardStats = async (req, res, next) => {
                 (SELECT COUNT(*) FROM users) AS total_users,
                 (SELECT COUNT(*) FROM users WHERE role = 'LANDLORD') AS total_landlords,
                 (SELECT COUNT(*) FROM users WHERE role = 'AGENT') AS total_agents,
-                (SELECT COUNT(*) FROM property_requests WHERE status = 'OPEN') AS open_requests
+                (SELECT COUNT(*) FROM property_requests WHERE status = 'OPEN') AS open_requests,
+                (SELECT COUNT(*) FROM boost_requests WHERE status = 'PENDING') AS pending_boosts,
+                (SELECT COALESCE(SUM(amount), 0) FROM boost_requests WHERE status = 'APPROVED') AS boost_revenue
         `;
         const result = await db.query(statsQuery);
 

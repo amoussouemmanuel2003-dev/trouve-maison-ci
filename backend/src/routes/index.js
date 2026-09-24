@@ -6,6 +6,7 @@ const listingRoutes = require('./listing.routes');
 const requestRoutes = require('./request.routes');
 const locationRoutes = require('./location.routes');
 const adminRoutes = require('./admin.routes');
+const boostRoutes = require('./boost.routes');
 
 // Enregistrement des sous-routeurs
 router.use('/auth', authRoutes);
@@ -13,6 +14,7 @@ router.use('/listings', listingRoutes);
 router.use('/requests', requestRoutes);
 router.use('/locations', locationRoutes);
 router.use('/admin', adminRoutes);
+router.use('/boosts', boostRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

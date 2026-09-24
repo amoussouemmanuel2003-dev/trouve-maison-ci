@@ -54,7 +54,7 @@ const handleLogin = async () => {
               v-model="identifier" 
               required
               type="text" 
-              placeholder="+2250700000001 ou email"
+              placeholder="Votre numéro ou votre adresse e-mail"
               class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500"
             />
           </div>
@@ -90,12 +90,7 @@ const handleLogin = async () => {
         </router-link>
       </div>
 
-      <!-- Astuce démo pour test immédiat -->
-      <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-        <span class="font-bold text-slate-300 block">Comptes de test pré-configurés :</span>
-        <div>Admin : <code class="text-amber-400">admin@trouvemaison.ci</code> / <code class="text-slate-300">Password123!</code></div>
-        <div>Bailleur : <code class="text-amber-400">bailleur@trouvemaison.ci</code> / <code class="text-slate-300">Password123!</code></div>
-      </div>
+
     </div>
   </div>
 </template>

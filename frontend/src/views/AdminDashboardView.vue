@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import api from '../services/api';
 import { 
   Shield, 
@@ -12,15 +12,26 @@ import {
   Eye,
   Star,
   Trash2,
-  Rocket
+  Rocket,
+  DollarSign,
+  Phone,
+  CreditCard,
+  TrendingUp
 } from 'lucide-vue-next';
 
 const stats = ref(null);
 const pendingListings = ref([]);
 const allListings = ref([]);
 const users = ref([]);
-const activeSection = ref('moderation'); // 'moderation', 'all_listings', 'users'
+const boostRequests = ref([]);
+const activeSection = ref('moderation'); // 'moderation', 'boosts', 'all_listings', 'users'
 const isLoading = ref(false);
+const boostFilter = ref('PENDING'); // 'PENDING', 'APPROVED', 'REJECTED', 'ALL'
+
+const filteredBoosts = computed(() => {
+  if (boostFilter.value === 'ALL') return boostRequests.value;
+  return boostRequests.value.filter(b => b.status === boostFilter.value);
+});
 
 const loadAdminData = async () => {
   isLoading.value = true;
@@ -36,6 +47,14 @@ const loadAdminData = async () => {
 
     const usersRes = await api.get('/admin/users?limit=50');
     users.value = usersRes.data.data;
+
+    // Charger les demandes de boost
+    try {
+      const boostsRes = await api.get('/admin/boosts');
+      boostRequests.value = boostsRes.data.data;
+    } catch (e) {
+      console.warn('Boost requests non disponible:', e.message);
+    }
   } catch (err) {
     console.error('Erreur chargement admin:', err);
   } finally {
@@ -98,6 +117,51 @@ const toggleUserStatus = async (user) => {
     alert('Erreur statut: ' + (err.response?.data?.message || err.message));
   }
 };
+
+// Gestion des Boosts
+const reviewBoostNote = ref('');
+
+const approveBoost = async (boostId) => {
+  if (confirm('Confirmer que le paiement Mobile Money a bien été reçu et activer le boost ?')) {
+    try {
+      await api.put(`/admin/boosts/${boostId}/review`, {
+        status: 'APPROVED',
+        admin_note: reviewBoostNote.value || 'Paiement vérifié et boost activé.'
+      });
+      reviewBoostNote.value = '';
+      await loadAdminData();
+      alert('✅ Boost approuvé ! L\'annonce est maintenant à la une.');
+    } catch (err) {
+      alert('Erreur: ' + (err.response?.data?.message || err.message));
+    }
+  }
+};
+
+const rejectBoost = async (boostId) => {
+  const reason = prompt('Raison du rejet (ex: Paiement non reçu, montant incorrect, etc.) :');
+  if (reason !== null) {
+    try {
+      await api.put(`/admin/boosts/${boostId}/review`, {
+        status: 'REJECTED',
+        admin_note: reason || 'Paiement non confirmé.'
+      });
+      await loadAdminData();
+      alert('❌ Demande de boost rejetée.');
+    } catch (err) {
+      alert('Erreur: ' + (err.response?.data?.message || err.message));
+    }
+  }
+};
+
+const formatDate = (dateStr) => {
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+};
+
+const formatMoney = (amount) => {
+  return new Intl.NumberFormat('fr-FR').format(amount);
+};
 </script>
 
 <template>
@@ -115,13 +179,13 @@ const toggleUserStatus = async (user) => {
     </div>
 
     <!-- 1. STATISTIQUES GLOBALES -->
-    <div v-if="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div v-if="stats" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
       <div class="bg-[#131d2e] border border-slate-800 p-5 rounded-2xl">
         <span class="text-xs text-slate-400 block">Total Annonces</span>
         <span class="text-2xl font-black text-white">{{ stats.total_listings }}</span>
       </div>
       <div class="bg-[#131d2e] border border-amber-500/30 p-5 rounded-2xl">
-        <span class="text-xs text-amber-400 block">En attente de validation</span>
+        <span class="text-xs text-amber-400 block">En attente</span>
         <span class="text-2xl font-black text-amber-400">{{ stats.pending_listings }}</span>
       </div>
       <div class="bg-[#131d2e] border border-emerald-500/30 p-5 rounded-2xl">
@@ -129,13 +193,25 @@ const toggleUserStatus = async (user) => {
         <span class="text-2xl font-black text-emerald-400">{{ stats.active_listings }}</span>
       </div>
       <div class="bg-[#131d2e] border border-slate-800 p-5 rounded-2xl">
-        <span class="text-xs text-slate-400 block">Total Utilisateurs</span>
+        <span class="text-xs text-slate-400 block">Utilisateurs</span>
         <span class="text-2xl font-black text-white">{{ stats.total_users }}</span>
+      </div>
+      <div class="bg-[#131d2e] border border-amber-500/30 p-5 rounded-2xl">
+        <span class="text-xs text-amber-400 block flex items-center gap-1">
+          <Rocket class="w-3 h-3" /> Boosts en attente
+        </span>
+        <span class="text-2xl font-black text-amber-400">{{ stats.pending_boosts || 0 }}</span>
+      </div>
+      <div class="bg-[#131d2e] border border-emerald-500/30 p-5 rounded-2xl">
+        <span class="text-xs text-emerald-400 block flex items-center gap-1">
+          <TrendingUp class="w-3 h-3" /> Revenus Boosts
+        </span>
+        <span class="text-2xl font-black text-emerald-400">{{ formatMoney(stats.boost_revenue || 0) }} F</span>
       </div>
     </div>
 
-    <!-- Onglets Modération / Annonces Actives / Utilisateurs -->
-    <div class="flex border-b border-slate-800 space-x-6 text-sm font-semibold overflow-x-auto">
+    <!-- Onglets -->
+    <div class="flex border-b border-slate-800 space-x-4 sm:space-x-6 text-sm font-semibold overflow-x-auto">
       <button 
         @click="activeSection = 'moderation'"
         :class="[
@@ -144,7 +220,18 @@ const toggleUserStatus = async (user) => {
         ]"
       >
         <Clock class="w-4 h-4" />
-        <span>En attente de validation ({{ pendingListings.length }})</span>
+        <span>Modération ({{ pendingListings.length }})</span>
+      </button>
+
+      <button 
+        @click="activeSection = 'boosts'"
+        :class="[
+          'pb-3 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap',
+          activeSection === 'boosts' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+        ]"
+      >
+        <CreditCard class="w-4 h-4" />
+        <span>Paiements & Boosts ({{ boostRequests.filter(b => b.status === 'PENDING').length }})</span>
       </button>
 
       <button 
@@ -155,7 +242,7 @@ const toggleUserStatus = async (user) => {
         ]"
       >
         <Building class="w-4 h-4" />
-        <span>Toutes les Annonces & Boosts ({{ allListings.length }})</span>
+        <span>Annonces & Boosts ({{ allListings.length }})</span>
       </button>
 
       <button 
@@ -166,7 +253,7 @@ const toggleUserStatus = async (user) => {
         ]"
       >
         <Users class="w-4 h-4" />
-        <span>Gestion des Utilisateurs</span>
+        <span>Utilisateurs</span>
       </button>
     </div>
 
@@ -197,7 +284,7 @@ const toggleUserStatus = async (user) => {
             <p class="text-xs text-slate-400 line-clamp-2">{{ listing.description }}</p>
 
             <div class="text-sm font-black text-amber-400">
-              {{ new Intl.NumberFormat('fr-FR').format(listing.monthly_rent) }} FCFA / mois
+              {{ formatMoney(listing.monthly_rent) }} FCFA / mois
             </div>
           </div>
 
@@ -216,7 +303,7 @@ const toggleUserStatus = async (user) => {
               class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950/20"
             >
               <CheckCircle class="w-4 h-4" />
-              <span>Valider (Mettre en ligne)</span>
+              <span>Valider</span>
             </button>
 
             <button 
@@ -231,7 +318,124 @@ const toggleUserStatus = async (user) => {
       </div>
     </div>
 
-    <!-- 3. TOUTES LES ANNONCES ACTIVES & GESTION BOOSTS -->
+    <!-- 3. GESTION DES PAIEMENTS / BOOST REQUESTS -->
+    <div v-else-if="activeSection === 'boosts'">
+      <!-- Filtres -->
+      <div class="flex items-center gap-2 mb-6 flex-wrap">
+        <button 
+          v-for="f in [{value: 'PENDING', label: '⏳ En attente', color: 'amber'}, {value: 'APPROVED', label: '✅ Approuvés', color: 'emerald'}, {value: 'REJECTED', label: '❌ Rejetés', color: 'red'}, {value: 'ALL', label: '📋 Tous', color: 'slate'}]"
+          :key="f.value"
+          @click="boostFilter = f.value"
+          :class="[
+            'px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all',
+            boostFilter === f.value 
+              ? `border-${f.color}-500 bg-${f.color}-500/10 text-${f.color}-400` 
+              : 'border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200'
+          ]"
+        >
+          {{ f.label }} ({{ f.value === 'ALL' ? boostRequests.length : boostRequests.filter(b => b.status === f.value).length }})
+        </button>
+      </div>
+
+      <div v-if="filteredBoosts.length === 0" class="text-center py-16 bg-[#131d2e] border border-slate-800 rounded-3xl">
+        <CreditCard class="w-10 h-10 text-slate-600 mx-auto mb-2" />
+        <p class="text-slate-400 text-sm">Aucune demande de boost trouvée.</p>
+      </div>
+
+      <div v-else class="space-y-4">
+        <div 
+          v-for="boost in filteredBoosts" 
+          :key="boost.id"
+          :class="[
+            'bg-[#131d2e] border p-6 rounded-3xl space-y-4',
+            boost.status === 'PENDING' ? 'border-amber-500/30' :
+            boost.status === 'APPROVED' ? 'border-emerald-500/20' : 'border-red-500/20'
+          ]"
+        >
+          <!-- En-tête -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-2 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span 
+                  :class="[
+                    'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase',
+                    boost.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' :
+                    boost.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
+                    'bg-red-500/20 text-red-400'
+                  ]"
+                >
+                  {{ boost.status === 'APPROVED' ? '✅ Approuvé' : boost.status === 'PENDING' ? '⏳ En attente' : '❌ Rejeté' }}
+                </span>
+                <span class="text-xs text-slate-500">{{ formatDate(boost.created_at) }}</span>
+              </div>
+
+              <h4 class="font-bold text-white">{{ boost.listing_title }}</h4>
+
+              <!-- Infos utilisateur -->
+              <div class="flex items-center gap-4 flex-wrap text-xs">
+                <span class="text-slate-400 flex items-center gap-1">
+                  <Users class="w-3 h-3" /> {{ boost.user_name }}
+                </span>
+                <span class="text-slate-400 flex items-center gap-1">
+                  <Phone class="w-3 h-3" /> {{ boost.user_phone }}
+                </span>
+                <span class="text-slate-400">Rôle: {{ boost.user_role }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Détails du paiement -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div>
+              <span class="text-slate-500 block">Montant</span>
+              <span class="text-amber-400 font-black text-base">{{ formatMoney(boost.amount) }} FCFA</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block">Opérateur</span>
+              <span class="text-white font-bold">
+                {{ boost.payment_method === 'WAVE' ? '🌊 Wave' : 
+                   boost.payment_method === 'ORANGE' ? '🍊 Orange Money' : 
+                   boost.payment_method === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money' }}
+              </span>
+            </div>
+            <div>
+              <span class="text-slate-500 block">Référence Transaction</span>
+              <span class="text-white font-mono font-bold">{{ boost.transaction_reference }}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block">Tél. Expéditeur</span>
+              <span class="text-white font-bold">{{ boost.phone_sender || 'Non renseigné' }}</span>
+            </div>
+          </div>
+
+          <!-- Boutons d'action (uniquement pour les demandes en attente) -->
+          <div v-if="boost.status === 'PENDING'" class="flex items-center gap-3 pt-2">
+            <button 
+              @click="approveBoost(boost.id)"
+              class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950/20 transition-all"
+            >
+              <CheckCircle class="w-4 h-4" />
+              <span>✅ Paiement reçu — Activer le Boost</span>
+            </button>
+
+            <button 
+              @click="rejectBoost(boost.id)"
+              class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-red-950/20 transition-all"
+            >
+              <XCircle class="w-4 h-4" />
+              <span>❌ Paiement non reçu — Rejeter</span>
+            </button>
+          </div>
+
+          <!-- Note admin (si rejeté) -->
+          <div v-if="boost.admin_note && boost.status !== 'PENDING'" class="text-xs text-slate-400 bg-slate-900/50 p-3 rounded-xl">
+            <strong>Note admin :</strong> {{ boost.admin_note }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. TOUTES LES ANNONCES ACTIVES & GESTION BOOSTS -->
     <div v-else-if="activeSection === 'all_listings'">
       <div v-if="allListings.length === 0" class="text-center py-16 bg-[#131d2e] border border-slate-800 rounded-3xl text-slate-400">
         Aucune annonce active sur la plateforme.
@@ -258,7 +462,7 @@ const toggleUserStatus = async (user) => {
 
             <h4 class="text-base font-bold text-white">{{ listing.title }}</h4>
             <div class="text-amber-400 font-extrabold text-sm">
-              {{ new Intl.NumberFormat('fr-FR').format(listing.monthly_rent) }} FCFA / mois
+              {{ formatMoney(listing.monthly_rent) }} FCFA / mois
             </div>
           </div>
 
@@ -294,7 +498,7 @@ const toggleUserStatus = async (user) => {
       </div>
     </div>
 
-    <!-- 4. GESTION DES UTILISATEURS -->
+    <!-- 5. GESTION DES UTILISATEURS -->
     <div v-else-if="activeSection === 'users'">
       <div class="bg-[#131d2e] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">

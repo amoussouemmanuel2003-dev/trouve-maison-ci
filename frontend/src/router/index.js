@@ -17,13 +17,13 @@ const routes = [
     path: '/',
     name: 'Home',
     component: HomeView,
-    meta: { title: 'Trouve Maison CI | Immobilier & Location à Abidjan' },
+    meta: { title: 'Trouve Maison CI | Immobilier & Location à Abidjan', description: 'Trouvez une maison, un appartement, un studio ou une villa à louer à Abidjan.' },
   },
   {
     path: '/annonces',
     name: 'Listings',
     component: ListingsView,
-    meta: { title: 'Toutes les annonces | Trouve Maison CI' },
+    meta: { title: 'Annonces immobilières à Abidjan | Trouve Maison CI', description: 'Explorez les maisons, appartements, studios et villas disponibles à la location à Abidjan.' },
   },
   {
     path: '/annonces/:id',
@@ -94,9 +94,15 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
   // Mise à jour du titre
-  if (to.meta.title) {
-    document.title = to.meta.title;
+  if (to.meta.title) document.title = to.meta.title;
+  const description = to.meta.description || 'Trouvez et publiez des annonces immobilières à Abidjan sur Trouve Maison CI.';
+  let descriptionTag = document.querySelector('meta[name="description"]');
+  if (!descriptionTag) {
+    descriptionTag = document.createElement('meta');
+    descriptionTag.name = 'description';
+    document.head.appendChild(descriptionTag);
   }
+  descriptionTag.content = description;
 
   // Rediriger les utilisateurs déjà connectés hors de login/register
   if (to.meta.guestOnly && authStore.isAuthenticated) {

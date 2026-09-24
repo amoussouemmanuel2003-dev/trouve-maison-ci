@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Après connexion de votre domaine, remplacez cette ligne par son URL réelle :
+# Sitemap: https://votre-domaine.com/sitemap.xml
