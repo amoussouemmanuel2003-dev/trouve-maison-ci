@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useHead } from '@unhead/vue'; // 1. Import de Unhead
 import { useListingStore } from '../stores/listing.store';
 import { useLocationStore } from '../stores/location.store';
 import ListingCard from '../components/ListingCard.vue';
@@ -16,6 +17,38 @@ import {
   TrendingUp,
   SlidersHorizontal
 } from 'lucide-vue-next';
+
+// 2. Configuration SEO & Open Graph de la page d'accueil
+useHead({
+  title: 'Trouve Maison CI | Vente & Location Immobilière à Abidjan',
+  meta: [
+    {
+      name: 'description',
+      content: 'Trouvez rapidement un appartement, un studio, un magasin ou une villa à louer/vendre à Abidjan (Cocody, Yopougon, Marcory, etc.). Publiez vos annonces gratuitement sur Trouve Maison CI.'
+    },
+    // Meta tags pour le partage WhatsApp / Facebook (Open Graph)
+    {
+      property: 'og:title',
+      content: 'Trouve Maison CI | Immobilier & Location à Abidjan'
+    },
+    {
+      property: 'og:description',
+      content: 'Trouvez votre prochain logement ou publiez vos annonces immobilières en quelques clics en Côte d’Ivoire.'
+    },
+    {
+      property: 'og:image',
+      content: 'https://trouve-maison-ci.vercel.app/icons/icon-512.png'
+    },
+    {
+      property: 'og:url',
+      content: 'https://trouve-maison-ci.vercel.app/'
+    },
+    {
+      property: 'og:type',
+      content: 'website'
+    }
+  ]
+});
 
 const router = useRouter();
 const listingStore = useListingStore();
